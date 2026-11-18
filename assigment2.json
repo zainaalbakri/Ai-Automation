@@ -1,0 +1,294 @@
+{
+  "name": "assigment2",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d88db29c-7ad7-4dfd-956a-9c4dee907ebe",
+      "name": "Telegram Trigger",
+      "webhookId": "34a9f8f8-158d-4b37-945b-01c13f0df041",
+      "credentials": {
+        "telegramApi": {
+          "id": "db6Curlk0YLSYEQ1",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.document.file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "52654669-92a7-478d-ad5f-f1b052aa6345",
+      "name": "Get a file",
+      "webhookId": "fad064ea-b02f-4de2-800b-51be0476a764",
+      "credentials": {
+        "telegramApi": {
+          "id": "db6Curlk0YLSYEQ1",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "qwen/qwen3.8-27b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        640,
+        256
+      ],
+      "id": "60933c06-ddb1-49f1-9faa-c7d00c720428",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "sWre5uqRXyaZn8CN",
+          "name": "Groq account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "bcf43874-075c-4c96-9f3f-55f8ed209914",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze the following student performance report.\n\nRead the report carefully and extract all the required academic information according to the System Message.\n\nStudent Report:\n{{ $json.text }}",
+        "options": {
+          "systemMessage": "You are an academic data extraction assistant for Global Automation Academy.\n\nYour task is to read the complete student performance report and extract academic information accurately.\n\nExtract:\n1. Student's full name.\n2. Course name.\n3. All module grades and their corresponding weights.\n4. Result status (Passed or Failed).\n5. Achievement (Distinction, Honors, etc.), if mentioned.\n\nRules:\n- Read the entire report carefully.\n- Do not calculate the final grade.\n- Do not invent or estimate missing information.\n- Do not confuse module grades with the final grade.\n- If information is missing, return null.\n- Return valid JSON only, without Markdown or explanations.\n\nUse exactly this JSON structure:\n\n{\n  \"student_name\": null,\n  \"course_name\": null,\n  \"module_grades\": [\n    {\n      \"grade\": null,\n      \"weight\": null\n    }\n  ],\n  \"result_status\": null,\n  \"achievement\": null\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        672,
+        16
+      ],
+      "id": "27955775-80dc-4cd8-9a67-63fd0bdccc4f",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst items = $input.all();\n\nreturn items.map(item => {\n  let data = item.json;\n\n  // Handle AI Agent output stored as a JSON string\n  if (typeof data.output === \"string\") {\n    data = JSON.parse(data.output);\n  } else if (data.output && typeof data.output === \"object\") {\n    data = data.output;\n  }\n\n  const modules = data.module_grades;\n\n  if (!Array.isArray(modules) || modules.length === 0) {\n    throw new Error(\"module_grades is missing or empty. Check AI Agent output.\");\n  }\n\n  const finalGrade = modules.reduce((total, module) => {\n    const grade = parseFloat(module.grade);\n    const weight = parseFloat(module.weight);\n\n    if (isNaN(grade) || isNaN(weight)) {\n      throw new Error(\"Invalid grade or weight in module_grades.\");\n    }\n\n    return total + (grade * weight / 100);\n  }, 0);\n\n  return {\n    json: {\n      ...data,\n      final_grade: finalGrade.toFixed(1) + \"%\"\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        16
+      ],
+      "id": "68ed27a2-4276-48d7-8d2c-3b0424e4062a",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "047c7f46-bfa9-4e1e-a9fe-91eaa2f14721",
+              "leftValue": "={{ $json.result_status }}",
+              "rightValue": "Passed",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        1264,
+        16
+      ],
+      "id": "e9da5ca2-fe60-48cb-ba79-8b9c74afb1fe",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "sendTo": "zaina2002albakri@gmail.com",
+        "subject": "Congratulations on Your Achievement – AI Automation Workshop",
+        "message": "=Dear {{ $json.student_name }},  Congratulations!  We are pleased to inform you that you have successfully completed the AI Automation Workshop at Global Automation Academy.  Your academic performance has been outstanding, and we are delighted to share your results:  Final Grade: {{ $json.final_grade }}  Result: {{ $json.result_status }}  Achievement: {{ $json.achievement }}  Your dedication and hard work have truly paid off. We are proud of your achievement and wish you continued success in your future learning journey.  Please find your Certificate of Achievement attached to this email.  Best regards,  Global Automation Academy Academic Team",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1488,
+        -80
+      ],
+      "id": "a4151d55-8fc3-48a2-976b-359e54dafaa6",
+      "name": "Send a message",
+      "webhookId": "e4890686-1d7b-4860-a6e1-0884a3496d3d",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "1dN0tBhV1nKrSQre",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "zaina2002albakri@gmail.com",
+        "subject": "=AI Automation Workshop – Academic Results",
+        "message": "=Dear {{ $json.student_name }},  Thank you for your participation in the AI Automation Workshop at Global Automation Academy.  After reviewing your academic performance, we regret to inform you that you did not achieve the minimum passing grade required to successfully complete the workshop.  Your results are as follows:  Final Grade: {{ $json.final_grade }}  Result: {{ $json.result_status }}  Achievement: {{ $json.achievement }}  We understand that this may be disappointing, but we encourage you not to give up. This is an opportunity to review the course materials, strengthen your understanding, and improve your performance.  You will have the opportunity to take a retake exam to demonstrate your knowledge and achieve a passing result.  If you need any assistance or additional support while preparing for the retake exam, please do not hesitate to contact our academic team.  We wish you the best of luck and look forward to seeing your progress.  Best regards,  Global Automation Academy Academic Team {{ $json.student_name }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1488,
+        112
+      ],
+      "id": "69d33afa-02bd-4304-adf2-f8ad9b17897b",
+      "name": "Send a message1",
+      "webhookId": "67a93c55-a977-41ba-ba37-b3ecd75785f6",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "1dN0tBhV1nKrSQre",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get a file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a file": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "29e0dee2-3baf-4254-840e-91f4b50117f6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "bf366c5d9c235d35aaf9fdd7fd677298538c4f93d17cdc768b2fcd745284379a"
+  },
+  "nodeGroups": [],
+  "id": "kE6GBkjjISmfeopU",
+  "tags": []
+}

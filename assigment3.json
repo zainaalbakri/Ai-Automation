@@ -1,0 +1,480 @@
+{
+  "name": "My workflow 9",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Feedback ",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Name"
+            },
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email"
+            },
+            {
+              "fieldLabel": "Feedback",
+              "fieldType": "textarea"
+            },
+            {
+              "fieldLabel": "Phone",
+              "fieldType": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        0
+      ],
+      "id": "57d46922-9191-4ce0-9573-89223f425531",
+      "name": "On form submission",
+      "webhookId": "fb853f34-ecf6-442c-b138-0ab0808dfbba"
+    },
+    {
+      "parameters": {
+        "model": "allam-2-7b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        272,
+        -128
+      ],
+      "id": "aaee22ee-ce85-467d-b3ce-2ddcd2123952",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "zdc4qQtPBc4SY038",
+          "name": "Groq account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=\nAnalyze this customer feedback:\n\n{{ $json.Feedback }}\n\nReturn strictly valid JSON as an array containing exactly one object.\n\nThe object must have these keys:\n- feedback: Original feedback text unchanged.\n- action: One specific actionable recommendation for the team, in the same language as the feedback.\n- status: Only \"positive\" or \"negative\".\n- priority: Only \"high\", \"neutral\", or \"low\".\n\nClassification rules:\n- Positive feedback: status positive, priority low.\n- Minor suggestions or complaints: status negative, priority neutral.\n- Serious issues such as payment, login, or reservation failures: status negative, priority high.\n\nSupport all languages and dialects.\nReturn raw JSON only. No markdown, no explanations.\n",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        256,
+        -304
+      ],
+      "id": "46876757-554c-48ce-89f5-7be01b2c0c8b",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst items = $input.all();\n\nreturn items.flatMap(item => {\n  let raw = item.json.text;\n\n  // Remove Markdown formatting if present\n  raw = raw.replace(/```json|```/gi, '').trim();\n\n  // Parse AI response\n  const parsed = JSON.parse(raw);\n\n  // Return structured data\n  return parsed.map(result => ({\n    json: {\n      feedback: result.feedback,\n      action: result.action,\n      status: result.status,\n      priority: result.priority\n    }\n  }));\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        592,
+        0
+      ],
+      "id": "5f8aac83-3b88-4012-9b04-fc0265001265",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        832,
+        32
+      ],
+      "id": "c7714dd1-c9da-4af3-8aba-aa5535ebe1ff",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "17cKJZWL32VXgRO3zVSE7Xt1vte5kNES1iWA7tISjLH0",
+          "mode": "list",
+          "cachedResultName": "Customer Feedback Management",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/17cKJZWL32VXgRO3zVSE7Xt1vte5kNES1iWA7tISjLH0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/17cKJZWL32VXgRO3zVSE7Xt1vte5kNES1iWA7tISjLH0/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $json.Name }}",
+            "Email ": "={{ $json.Email }}",
+            "Feedback": "={{ $json.Feedback }}",
+            "Priority": "={{ $json.priority }}",
+            "Action": "={{ $json.action }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email ",
+              "displayName": "Email ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Feedback",
+              "displayName": "Feedback",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Action",
+              "displayName": "Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Priority",
+              "displayName": "Priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1056,
+        32
+      ],
+      "id": "9678a24b-069c-4fc9-99b5-49181158dc34",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "PhsTvMhMwdD3peay",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "1f759fd1-2fde-4859-b134-c082f9d6330a",
+              "leftValue": "={{ $('Merge').item.json.status }}",
+              "rightValue": "positive",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "3695c270-73ba-4471-845f-ef69e7fe0ea4",
+              "leftValue": "",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        1280,
+        32
+      ],
+      "id": "1c39ef45-78b1-4c83-9dc0-695b95adc7c6",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('On form submission').item.json.Email }}",
+        "subject": "Thank You for Your Feedback!",
+        "message": "=Dear {{ $('On form submission').item.json.Name }} ,  Thank you for taking the time to share your feedback with us!  We are delighted to hear about your positive experience. Your kind words mean a lot to our team and motivate us to continue providing the best possible service.  We truly appreciate your trust and support. We look forward to serving you again!  Best regards, Customer Support Team",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1504,
+        -64
+      ],
+      "id": "5c4596e0-7304-4dab-a013-25caa2fbf2e7",
+      "name": "Send a message",
+      "webhookId": "be9cc55b-bb5a-4583-85b2-cd34215ad3f6",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "1dN0tBhV1nKrSQre",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Merge').item.json.Email }}",
+        "subject": "We Apologize for Your Experience",
+        "message": "=Dear {{ $('Merge').item.json.Name }},  Thank you for sharing your feedback with us.  We sincerely apologize for the inconvenience you experienced. We take your concerns seriously.  Our support team is currently reviewing your feedback and investigating the issue to find an appropriate solution.  We appreciate your patience and understanding.  Best regards, Customer Support Team",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1504,
+        128
+      ],
+      "id": "2780d060-7a92-4ea7-9609-6ee3dce17b8b",
+      "name": "Send a message1",
+      "webhookId": "76271294-a9ed-4ad2-9a29-0ce56bc4e03f",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "1dN0tBhV1nKrSQre",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "17cKJZWL32VXgRO3zVSE7Xt1vte5kNES1iWA7tISjLH0",
+          "mode": "list",
+          "cachedResultName": "Customer Feedback Management",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/17cKJZWL32VXgRO3zVSE7Xt1vte5kNES1iWA7tISjLH0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1420262087,
+          "mode": "list",
+          "cachedResultName": "Sheet2",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/17cKJZWL32VXgRO3zVSE7Xt1vte5kNES1iWA7tISjLH0/edit#gid=1420262087"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "name": "={{ $('Merge').item.json.Name }}",
+            "phone": "={{ $('Merge').item.json.Phone }}",
+            "action": "={{ $('Merge').item.json.action }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "action",
+              "displayName": "action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1728,
+        128
+      ],
+      "id": "865b46b1-1c6f-48a2-9110-8eeae56a2157",
+      "name": "Append row in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "PhsTvMhMwdD3peay",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message1": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "0be10161-bcb4-4394-92ae-46a3cd682d9d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "bf366c5d9c235d35aaf9fdd7fd677298538c4f93d17cdc768b2fcd745284379a"
+  },
+  "nodeGroups": [],
+  "id": "rj7JbUlNPzpf7PJS",
+  "tags": []
+}
